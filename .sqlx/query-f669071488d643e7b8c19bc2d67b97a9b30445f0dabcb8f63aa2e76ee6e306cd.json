@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT s.version FROM schemas s JOIN subjects subj ON s.subject_id = subj.id WHERE subj.name = $1 ORDER BY s.version ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f669071488d643e7b8c19bc2d67b97a9b30445f0dabcb8f63aa2e76ee6e306cd"
+}

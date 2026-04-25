@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT s.id, subj.name as subject, s.version, s.schema_text as schema,\n                   s.schema_type, s.references\n            FROM schemas s\n            JOIN subjects subj ON s.subject_id = subj.id\n            WHERE s.id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "subject",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "schema",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "schema_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "references",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "735bddd29433386baba31a432fc2a428aecdaae40e4162bbba4c11d1b9275e38"
+}

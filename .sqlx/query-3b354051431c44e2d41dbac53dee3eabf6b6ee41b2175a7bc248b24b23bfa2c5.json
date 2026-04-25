@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT MAX(s.version) as max_version FROM schemas s JOIN subjects subj ON s.subject_id = subj.id WHERE subj.name = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "max_version",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "3b354051431c44e2d41dbac53dee3eabf6b6ee41b2175a7bc248b24b23bfa2c5"
+}
