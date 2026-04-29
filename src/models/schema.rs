@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Schema {
@@ -32,17 +33,23 @@ pub struct RegisterSchemaRequest {
     pub schema: String,
     #[serde(default)]
     pub schema_type: Option<String>,
+    #[serde(default)]
+    pub compatibility: Option<String>,
 }
 
-impl SchemaType {
-    pub fn from_str(s: &str) -> Self {
-        match s.to_uppercase().as_str() {
+impl FromStr for SchemaType {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_uppercase().as_str() {
             "PROTOBUF" => SchemaType::Protobuf,
             "JSON" => SchemaType::Json,
             _ => SchemaType::Avro,
-        }
+        })
     }
+}
 
+impl SchemaType {
     pub fn as_str(&self) -> &str {
         match self {
             SchemaType::Avro => "AVRO",

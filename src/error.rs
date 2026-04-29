@@ -17,6 +17,9 @@ pub enum StorageError {
     #[error("Invalid schema: {0}")]
     InvalidSchema(String),
 
+    #[error("Incompatible schema: {0}")]
+    Incompatible(String),
+
     #[error("Database error: {0}")]
     DatabaseError(#[from] sqlx::Error),
 
@@ -39,6 +42,7 @@ impl IntoResponse for StorageError {
             StorageError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
             StorageError::AlreadyExists => (StatusCode::CONFLICT, self.to_string()),
             StorageError::InvalidSchema(ref s) => (StatusCode::BAD_REQUEST, s.clone()),
+            StorageError::Incompatible(ref s) => (StatusCode::CONFLICT, s.clone()),
             _ => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
         };
 

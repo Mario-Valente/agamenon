@@ -3,7 +3,7 @@ use crate::cache::CachedSchemaStore;
 use crate::error::StorageError;
 use crate::models::{
     CompatibilityCheckRequest, CompatibilityCheckResponse, CompatibilityLevel, RegisterSchemaRequest,
-    SchemaResponse, SchemaType,
+    SchemaResponse,
 };
 use crate::services::CompatibilityChecker;
 use crate::storage::SchemaStore;
@@ -45,7 +45,34 @@ pub async fn register_schema(
     Path(subject): Path<String>,
     Json(payload): Json<RegisterSchemaRequest>,
 ) -> Result<(StatusCode, Json<SchemaResponse>), StorageError> {
-    let schema_type = SchemaType::from_str(&payload.schema_type.unwrap_or_else(|| "AVRO".to_string()));
+    let schema_type = payload.schema_type.unwrap_or_else(|| "AVRO".to_string()).parse().unwrap();
+    let compatibility: CompatibilityLevel = payload
+        .compatibility
+        .unwrap_or_else(|| "BACKWARD".to_string())
+        .parse()
+        .unwrap();
+
+    // Check compatibility with latest version if exists and compatibility is not NONE
+    if compatibility != CompatibilityLevel::None {
+        if let Ok(latest_version) = state.store.get_latest_version(&subject).await {
+            let old_schema = state.store.get_schema_by_version(&subject, latest_version).await?;
+
+            let is_compatible = CompatibilityChecker::check(
+                &payload.schema,
+                &old_schema.schema,
+                compatibility,
+            )
+            .map_err(|e| StorageError::InvalidSchema(e.to_string()))?;
+
+            if !is_compatible {
+                return Err(StorageError::Incompatible(format!(
+                    "Schema is not {} compatible with version {}",
+                    compatibility.as_str(),
+                    latest_version
+                )));
+            }
+        }
+    }
 
     // Register schema
     let id = state
@@ -89,6 +116,12 @@ pub async fn check_compatibility(
     Path((subject, version)): Path<(String, i32)>,
     Json(payload): Json<CompatibilityCheckRequest>,
 ) -> Result<Json<CompatibilityCheckResponse>, (StatusCode, Json<serde_json::Value>)> {
+    let compatibility: CompatibilityLevel = payload
+        .compatibility
+        .unwrap_or_else(|| "BACKWARD".to_string())
+        .parse()
+        .unwrap();
+
     let old_schema = state
         .store
         .get_schema_by_version(&subject, version)
@@ -103,7 +136,7 @@ pub async fn check_compatibility(
     let is_compatible = CompatibilityChecker::check(
         &payload.schema,
         &old_schema.schema,
-        CompatibilityLevel::Backward,
+        compatibility,
     )
     .map_err(|e| {
         (

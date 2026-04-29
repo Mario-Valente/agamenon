@@ -16,7 +16,6 @@ use axum::{
 };
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
-use tracing_subscriber;
 
 async fn set_content_type_middleware(request: Request, next: Next) -> Response {
     let mut response = next.run(request).await;

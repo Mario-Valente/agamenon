@@ -40,7 +40,7 @@ impl SchemaStore for PostgresSchemaStore {
             version: row.version,
             schema: row.schema,
             references: row.references.as_ref().and_then(|r| serde_json::from_str(r).ok()),
-            schema_type: SchemaType::from_str(&row.schema_type),
+            schema_type: row.schema_type.parse().unwrap(),
         })
     }
 
@@ -127,7 +127,7 @@ impl SchemaStore for PostgresSchemaStore {
             version: row.version,
             schema: row.schema,
             references: row.references.as_ref().and_then(|r| serde_json::from_str(r).ok()),
-            schema_type: SchemaType::from_str(&row.schema_type),
+            schema_type: row.schema_type.parse().unwrap(),
         })
     }
 
