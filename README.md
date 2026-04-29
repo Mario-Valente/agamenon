@@ -70,6 +70,7 @@ curl -X POST http://localhost:8081/subjects/user-value/versions \
   -d '{
     "schema": "{\"type\":\"record\",\"name\":\"User\",\"fields\":[{\"name\":\"id\",\"type\":\"int\"},{\"name\":\"name\",\"type\":\"string\"}]}",
     "schema_type": "AVRO"
+    "compatibility": "BACKWARD"
   }'
 ```
 
