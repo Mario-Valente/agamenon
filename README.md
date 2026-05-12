@@ -114,6 +114,10 @@ cargo test
 - **Writes**: ~10-50ms depending on database
 - **Memory**: ~100 bytes per cached schema
 
+## WIP
+- storage in S3 bucket
+- new routes to get subjects base on from specific schema/body
+
 ## License
 
 MIT
