@@ -1,10 +1,11 @@
 use agamenon::{
     cache::CachedSchemaStore,
-    config::Config,
+    config::{Config, StorageBackend},
     routes::{
-        check_compatibility, get_schema_by_id, list_subjects, list_versions, register_schema, AppState,
+        check_compatibility, get_schema_by_id, list_subjects, list_versions, lookup_schema,
+        register_schema, AppState,
     },
-    storage::PostgresSchemaStore,
+    storage::{PostgresSchemaStore, S3SchemaStore, SchemaStore},
 };
 use axum::{
     extract::Request,
@@ -35,29 +36,42 @@ async fn main() {
 
     let config = Config::from_env();
 
-    println!("🔗 Connecting to database: {}", config.database_url);
+    // Initialize storage based on backend
+    let store: Arc<dyn SchemaStore> = match config.storage_backend {
+        StorageBackend::Postgres => {
+            println!("🔗 Connecting to database: {}", config.database_url);
 
-    // Create connection pool
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&config.database_url)
-        .await
-        .expect("Failed to connect to database");
+            // Create connection pool
+            let pool = PgPoolOptions::new()
+                .max_connections(5)
+                .connect(&config.database_url)
+                .await
+                .expect("Failed to connect to database");
 
-    // Run migrations
-    println!("📦 Running migrations...");
-    sqlx::migrate!("./migrations")
-        .run(&pool)
-        .await
-        .expect("Failed to run migrations");
+            // Run migrations
+            println!("📦 Running migrations...");
+            sqlx::migrate!("./migrations")
+                .run(&pool)
+                .await
+                .expect("Failed to run migrations");
 
-    println!("✅ Migrations completed");
+            println!("✅ Migrations completed");
 
-    // Initialize storage
-    let postgres_store = Arc::new(PostgresSchemaStore::new(pool));
+            Arc::new(PostgresSchemaStore::new(pool))
+        }
+        StorageBackend::S3 => {
+            println!("🪣 Using S3 bucket: {}", config.s3_bucket);
+
+            Arc::new(
+                S3SchemaStore::new(config.s3_bucket.clone())
+                    .await
+                    .expect("Failed to initialize S3 storage"),
+            )
+        }
+    };
+
     let cached_store = Arc::new(
-        CachedSchemaStore::new(postgres_store, config.cache_max_capacity)
-            .await,
+        CachedSchemaStore::new(store, config.cache_max_capacity).await,
     );
 
     let state = AppState {
@@ -67,6 +81,7 @@ async fn main() {
     // Create router
     let app = Router::new()
         .route("/subjects", get(list_subjects))
+        .route("/subjects/:name", post(lookup_schema))
         .route("/subjects/:name/versions", get(list_versions))
         .route("/subjects/:name/versions", post(register_schema))
         .route("/schemas/ids/:id", get(get_schema_by_id))

@@ -3,8 +3,10 @@ use crate::models::{Schema, SchemaType};
 use async_trait::async_trait;
 
 pub mod postgres;
+pub mod s3;
 
 pub use postgres::PostgresSchemaStore;
+pub use s3::S3SchemaStore;
 
 #[async_trait]
 pub trait SchemaStore: Send + Sync {
@@ -34,4 +36,7 @@ pub trait SchemaStore: Send + Sync {
 
     /// Get the latest version of a subject
     async fn get_latest_version(&self, subject: &str) -> Result<i32, StorageError>;
+
+    /// Lookup schema by body under a subject
+    async fn lookup_schema(&self, subject: &str, schema_str: &str) -> Result<Schema, StorageError>;
 }
