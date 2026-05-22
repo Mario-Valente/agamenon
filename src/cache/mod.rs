@@ -76,4 +76,10 @@ impl SchemaStore for CachedSchemaStore {
     async fn get_latest_version(&self, subject: &str) -> Result<i32, StorageError> {
         self.inner.get_latest_version(subject).await
     }
+
+    async fn lookup_schema(&self, subject: &str, schema_str: &str) -> Result<Schema, StorageError> {
+        let schema = self.inner.lookup_schema(subject, schema_str).await?;
+        self.cache.insert(schema.id, schema.clone()).await;
+        Ok(schema)
+    }
 }

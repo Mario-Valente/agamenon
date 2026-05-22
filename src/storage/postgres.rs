@@ -149,4 +149,31 @@ impl SchemaStore for PostgresSchemaStore {
 
         row.max_version.ok_or(StorageError::NotFound)
     }
+
+    async fn lookup_schema(&self, subject: &str, schema_str: &str) -> Result<Schema, StorageError> {
+        let row = sqlx::query!(
+            r#"
+            SELECT s.id, subj.name as subject, s.version, s.schema_text as schema,
+                   s.schema_type, s.references
+            FROM schemas s
+            JOIN subjects subj ON s.subject_id = subj.id
+            WHERE subj.name = $1 AND s.schema_text = $2
+            "#,
+            subject,
+            schema_str
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let row = row.ok_or(StorageError::NotFound)?;
+
+        Ok(Schema {
+            id: row.id,
+            subject: row.subject,
+            version: row.version,
+            schema: row.schema,
+            references: row.references.as_ref().and_then(|r| serde_json::from_str(r).ok()),
+            schema_type: row.schema_type.parse().unwrap(),
+        })
+    }
 }

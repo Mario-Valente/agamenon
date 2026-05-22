@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agamenon.fullname" . }}
+  labels:
+    {{- include "agamenon.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "agamenon.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "agamenon.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "agamenon.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.server.port }}
+              protocol: TCP
+          env:
+            # Storage backend
+            - name: STORAGE_BACKEND
+              value: {{ .Values.storage.backend | quote }}
+
+            # Server config
+            - name: SERVER_HOST
+              value: {{ .Values.server.host | quote }}
+            - name: SERVER_PORT
+              value: {{ .Values.server.port | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.logging.level | quote }}
+            - name: CACHE_MAX_CAPACITY
+              value: {{ .Values.cache.maxCapacity | quote }}
+
+            # Auth credentials
+            - name: SCHEMA_REGISTRY_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret | default (printf "%s-auth" (include "agamenon.fullname" .)) }}
+                  key: {{ .Values.auth.usernameKey | default "username" }}
+            - name: SCHEMA_REGISTRY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret | default (printf "%s-auth" (include "agamenon.fullname" .)) }}
+                  key: {{ .Values.auth.passwordKey | default "password" }}
+
+            {{- if eq .Values.storage.backend "s3" }}
+            # S3 configuration
+            - name: S3_BUCKET
+              value: {{ .Values.storage.s3.bucket | quote }}
+            - name: AWS_REGION
+              value: {{ .Values.storage.s3.region | quote }}
+            {{- if .Values.storage.s3.endpoint }}
+            - name: AWS_ENDPOINT_URL
+              value: {{ .Values.storage.s3.endpoint | quote }}
+            {{- end }}
+            {{- if .Values.storage.s3.forcePathStyle }}
+            - name: AWS_S3_FORCE_PATH_STYLE
+              value: "true"
+            {{- end }}
+            {{- end }}
+
+            {{- if eq .Values.storage.backend "postgres" }}
+            # PostgreSQL configuration
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.storage.postgres.existingSecret | default (printf "%s-postgres" (include "agamenon.fullname" .)) }}
+                  key: {{ .Values.storage.postgres.secretKey | default "password" }}
+            - name: DATABASE_URL
+              value: {{ include "agamenon.databaseUrl" . | quote }}
+            {{- end }}
+
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.extraVolumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.extraVolumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

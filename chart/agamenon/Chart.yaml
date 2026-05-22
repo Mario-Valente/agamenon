@@ -1,0 +1,18 @@
+apiVersion: v2
+name: agamenon
+description: A lightweight PostgreSQL/S3-backed Schema Registry - drop-in replacement for Confluent Schema Registry
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - schema-registry
+  - avro
+  - kafka
+  - schemas
+  - postgresql
+  - s3
+maintainers:
+  - name: Mario Valente
+home: https://github.com/your-org/agamenon
+sources:
+  - https://github.com/your-org/agamenon

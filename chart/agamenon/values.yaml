@@ -1,0 +1,163 @@
+# Default values for agamenon schema registry
+# S3 is the default storage backend
+
+replicaCount: 2
+
+image:
+  repository: agamenon
+  pullPolicy: IfNotPresent
+  tag: ""  # Defaults to chart appVersion
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Storage backend configuration
+storage:
+  # Backend type: "s3" or "postgres"
+  backend: s3
+
+  # S3 configuration (used when backend: s3)
+  s3:
+    bucket: "agamenon-schemas"
+    region: "us-east-1"
+    # Optional: endpoint for S3-compatible storage (MinIO, LocalStack)
+    endpoint: ""
+    # Optional: force path style (required for MinIO)
+    forcePathStyle: false
+
+  # PostgreSQL configuration (used when backend: postgres)
+  postgres:
+    # External database connection
+    host: ""
+    port: 5432
+    database: "agamenon"
+    username: "agamenon"
+    # Password from secret
+    existingSecret: ""
+    secretKey: "password"
+    # Or specify password directly (not recommended for production)
+    password: ""
+    # SSL mode: disable, require, verify-ca, verify-full
+    sslMode: "require"
+
+# Server configuration
+server:
+  host: "0.0.0.0"
+  port: 8081
+
+# Logging
+logging:
+  level: "info"
+
+# Cache configuration
+cache:
+  maxCapacity: 1000000
+
+# Authentication
+auth:
+  # Basic auth credentials
+  username: "admin"
+  password: "admin"
+  # Use existing secret for credentials
+  existingSecret: ""
+  usernameKey: "username"
+  passwordKey: "password"
+
+serviceAccount:
+  create: true
+  annotations: {}
+  # AWS IAM role for S3 access (EKS)
+  # annotations:
+  #   eks.amazonaws.com/role-arn: arn:aws:iam::123456789:role/agamenon-s3-role
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8081
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: schema-registry.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: schema-registry-tls
+  #    hosts:
+  #      - schema-registry.local
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Probes
+livenessProbe:
+  httpGet:
+    path: /subjects
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /subjects
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Extra environment variables
+extraEnv: []
+  # - name: AWS_REGION
+  #   value: "us-east-1"
+
+# Extra volumes
+extraVolumes: []
+
+# Extra volume mounts
+extraVolumeMounts: []

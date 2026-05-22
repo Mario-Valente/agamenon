@@ -37,6 +37,11 @@ pub struct RegisterSchemaRequest {
     pub compatibility: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct LookupSchemaRequest {
+    pub schema: String,
+}
+
 impl FromStr for SchemaType {
     type Err = std::convert::Infallible;
 

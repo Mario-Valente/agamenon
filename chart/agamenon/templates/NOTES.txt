@@ -1,0 +1,40 @@
+Agamenon Schema Registry has been deployed!
+
+Storage Backend: {{ .Values.storage.backend | upper }}
+{{- if eq .Values.storage.backend "s3" }}
+S3 Bucket: {{ .Values.storage.s3.bucket }}
+Region: {{ .Values.storage.s3.region }}
+{{- else }}
+Database: {{ .Values.storage.postgres.host }}:{{ .Values.storage.postgres.port }}/{{ .Values.storage.postgres.database }}
+{{- end }}
+
+To access the Schema Registry:
+
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "agamenon.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+        Watch status with: kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "agamenon.fullname" . }}
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "agamenon.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.service.port }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "agamenon.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  echo "Visit http://127.0.0.1:{{ .Values.service.port }}"
+{{- end }}
+
+Example usage:
+
+  # List subjects
+  curl -u {{ .Values.auth.username }}:{{ .Values.auth.password }} http://localhost:{{ .Values.service.port }}/subjects
+
+  # Register a schema
+  curl -X POST -u {{ .Values.auth.username }}:{{ .Values.auth.password }} \
+    -H "Content-Type: application/json" \
+    -d '{"schema": "{\"type\":\"record\",\"name\":\"User\",\"fields\":[{\"name\":\"id\",\"type\":\"int\"}]}"}' \
+    http://localhost:{{ .Values.service.port }}/subjects/user-value/versions

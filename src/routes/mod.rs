@@ -2,8 +2,8 @@ use crate::auth::BasicAuth;
 use crate::cache::CachedSchemaStore;
 use crate::error::StorageError;
 use crate::models::{
-    CompatibilityCheckRequest, CompatibilityCheckResponse, CompatibilityLevel, RegisterSchemaRequest,
-    SchemaResponse,
+    CompatibilityCheckRequest, CompatibilityCheckResponse, CompatibilityLevel, LookupSchemaRequest,
+    RegisterSchemaRequest, SchemaResponse,
 };
 use crate::services::CompatibilityChecker;
 use crate::storage::SchemaStore;
@@ -146,4 +146,20 @@ pub async fn check_compatibility(
     })?;
 
     Ok(Json(CompatibilityCheckResponse { is_compatible }))
+}
+
+/// POST /subjects/:name - Lookup schema under subject
+pub async fn lookup_schema(
+    _auth: BasicAuth,
+    State(state): State<AppState>,
+    Path(subject): Path<String>,
+    Json(payload): Json<LookupSchemaRequest>,
+) -> Result<Json<SchemaResponse>, StorageError> {
+    let schema = state.store.lookup_schema(&subject, &payload.schema).await?;
+    Ok(Json(SchemaResponse {
+        subject: schema.subject,
+        version: schema.version,
+        id: schema.id,
+        schema: schema.schema,
+    }))
 }
